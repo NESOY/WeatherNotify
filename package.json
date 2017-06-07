@@ -1,0 +1,27 @@
+{
+  "name": "line-weather",
+  "version": "1.0.0",
+  "description": "Nesoy",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NESOY/WeatherNotify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NESOY/WeatherNotify/issues"
+  },
+
+  "homepage": "https://github.com/B-gle/Server#readme",
+
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Nesoy",
+  "license": "ISC",
+  "dependencies": {
+    "node-schedule": "^1.2.3",
+    "pm2": "^2.4.6",
+    "request": "^2.81.0"
+  }
+}
