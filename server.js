@@ -1,21 +1,29 @@
 const request = require('request');
 const schedule = require('node-schedule');
-const config = require('config');
+const config = require('./config');
 
 const weatherOptions = {
-    url: 'http://apis.skplanetx.com/weather/summary?lon=127.060539&stnid=&lat=37.650433&version=1',
+    url: 'http://apis.skplanetx.com/weather/summary?&version=1&stnid=&lat='+config.lat+'&lon='+config.long,
     headers: {
         'Accept': 'application/json',
         'appKey': config.skWeatherappKey
     }
 };
 const dustOptions = {
-    url: 'http://apis.skplanetx.com/weather/dust?version=1&lat=37.650433&lon=127.060539',
+    url: 'http://apis.skplanetx.com/weather/dust?version=1&lat='+config.lat+'&lon='+config.long,
     headers: {
         'Accept': 'application/json',
         'appKey': config.skWeatherappKey
     }
-}
+};
+
+const ultravioletOptions = {
+    url: 'http://apis.skplanetx.com/weather/windex/uvindex?version=1&lat='+config.lat+'&lon='+config.long,
+    headers: {
+        'Accept': 'application/json',
+        'appKey': config.skWeatherappKey
+    }
+};
 const lineOptions = {
     url: 'https://notify-api.line.me/api/notify',
     headers: {
@@ -29,12 +37,10 @@ const lineOptions = {
 function getTodayWeather() {
     return new Promise((resolve, reject) => {
         request(weatherOptions, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
+            if (!error && response.statusCode === 200) {
                 const info = JSON.parse(body);
                 let today = new Date();
-                lineOptions.formData.message += '\n 오늘 : ' + today.getFullYear() + '. ' + (today.getMonth() + 1) + '. ' + today.getDate() + '\n';
-                lineOptions.formData.message += "==========================\n";
-                lineOptions.formData.message += "날씨 : ";
+                lineOptions.formData.message += '\n[오늘' + today.getFullYear() + '. ' + (today.getMonth() + 1) + '. ' + today.getDate() + '의 날씨]\n';
                 switch (info.weather.summary[0].today.sky.name) {
                     case '맑음':
                         lineOptions.formData.message += '맑음☀️ ';
@@ -58,7 +64,7 @@ function getTodayWeather() {
                         lineOptions.formData.message += '비☔ 또는 눈⛄️ ';
                         break;
                 }
-                lineOptions.formData.message +=
+                lineOptions.formData.message += '\n' +
                     Math.round(info.weather.summary[0].today.temperature.tmin) + '℃ / '
                     + Math.round(info.weather.summary[0].today.temperature.tmax) + '℃\n';
                 return resolve('success get Today Weather');
@@ -71,12 +77,11 @@ function getTodayWeather() {
 function getTomorrowWeather() {
     return new Promise((resolve, reject) => {
         request(weatherOptions, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
+            if (!error && response.statusCode === 200) {
                 const info = JSON.parse(body);
                 let today = new Date();
-                lineOptions.formData.message += '\n\n 내일 : ' + today.getFullYear() + '. ' + (today.getMonth() + 1) + '. ' + (today.getDate() + 1) + '\n';
-                lineOptions.formData.message += "==========================\n";
-                lineOptions.formData.message += "날씨 : ";
+                lineOptions.formData.message += '\n――――――――――――――\n';
+                lineOptions.formData.message += '[내일' + today.getFullYear() + '. ' + (today.getMonth() + 1) + '. ' + (today.getDate() + 1) + '의 날씨]\n';
                 switch (info.weather.summary[0].tomorrow.sky.name) {
                     case '맑음':
                         lineOptions.formData.message += '맑음☀️ ';
@@ -100,7 +105,7 @@ function getTomorrowWeather() {
                         lineOptions.formData.message += '비☔ 또는 눈⛄️ ';
                         break;
                 }
-                lineOptions.formData.message +=
+                lineOptions.formData.message += '\n' +
                     Math.round(info.weather.summary[0].tomorrow.temperature.tmin) + '℃ / '
                     + Math.round(info.weather.summary[0].tomorrow.temperature.tmax) + '℃\n';
                 return resolve('success get Tomorrow Weather');
@@ -115,7 +120,7 @@ function getTomorrowWeather() {
 function getDustInfo() {
     return new Promise((resolve, reject) => {
         request(dustOptions, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
+            if (!error && response.statusCode === 200) {
                 const info = JSON.parse(body);
                 lineOptions.formData.message += "미세먼지 : ";
                 switch (info.weather.dust[0].pm10.grade) {
@@ -147,6 +152,26 @@ function getDustInfo() {
     });
 }
 
+function getUltravioletInfo() {
+    return new Promise((resolve, reject) => {
+        request(ultravioletOptions, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                const info = JSON.parse(body);
+                lineOptions.formData.message += "\n자외선지수 : " +info.weather.wIndex.uvindex[0].day00.index+ '\n';
+                lineOptions.formData.message += "\n자외선지수 : " +info.weather.wIndex.uvindex[0].day00.comment+ '\n';
+
+                return resolve('success Ultraviolet Info');
+
+            }
+            else {
+                console.log('error Ultraviolet Info');
+                return reject(error);
+            }
+
+        });
+    });
+}
+
 function sendLine() {
     return new Promise((resolve, reject) => {
         request.post(lineOptions, (error, response, body) => {
@@ -161,14 +186,13 @@ function sendLine() {
     });
 }
 
-schedule.scheduleJob('0 4 8 * * *', async () => {
-
+schedule.scheduleJob('0 0 7 * * *', async () => {
     try {
-        console.log(await getTodayWeather());
-        console.log(await getDustInfo());
-        console.log(await getTomorrowWeather());
-        console.log(await sendLine());
-
+        await getTodayWeather();
+        await getDustInfo();
+        await getUltravioletInfo();
+        await getTomorrowWeather();
+        await sendLine();
     } catch (err) {
         console.log(err);
     }
