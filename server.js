@@ -74,6 +74,7 @@ function getTodayWeather() {
         });
     });
 }
+
 function getTomorrowWeather() {
     return new Promise((resolve, reject) => {
         request(weatherOptions, (error, response, body) => {
@@ -115,7 +116,6 @@ function getTomorrowWeather() {
         });
     });
 }
-
 
 function getDustInfo() {
     return new Promise((resolve, reject) => {
@@ -186,8 +186,13 @@ function sendLine() {
     });
 }
 
+function initLineMessage(){
+    lineOptions.formData.message = "";
+}
+
 schedule.scheduleJob('0 0 7 * * *', async () => {
     try {
+        initLineMessage();
         await getTodayWeather();
         await getDustInfo();
         await getUltravioletInfo();
